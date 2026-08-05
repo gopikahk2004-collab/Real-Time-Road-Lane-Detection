@@ -4,7 +4,11 @@ import cv2
 from PIL import Image
 import os
 import tempfile
-from moviepy.editor import VideoFileClip
+try:
+    from moviepy.editor import VideoFileClip
+except ImportError:
+    from moviepy import VideoFileClip
+
 from moviepy.callbacks import ProgBarLogger
 import time
 
