@@ -86,21 +86,24 @@ def average_slope_intercept(lines, slope_min=0.3, slope_max=2.0):
     right_weights = []  # (length,)
     
     for line in lines:
-        for x1, y1, x2, y2 in line:
-            if x1 == x2:
-                continue
-            slope = (y2 - y1) / (x2 - x1)
-            intercept = y1 - (slope * x1)
-            length = np.sqrt(((y2 - y1) ** 2) + ((x2 - x1) ** 2))
-            
-            # Check if slope falls within realistic bounds
-            if slope_min <= abs(slope) <= slope_max:
-                if slope < 0:  # Left lane (slopes up to the right, negative in image coordinates)
-                    left_lines.append((slope, intercept))
-                    left_weights.append(length)
-                else:          # Right lane (slopes down to the right, positive in image coordinates)
-                    right_lines.append((slope, intercept))
-                    right_weights.append(length)
+        coords = line.flatten()
+        if len(coords) != 4:
+            continue
+        x1, y1, x2, y2 = coords
+        if x1 == x2:
+            continue
+        slope = (y2 - y1) / (x2 - x1)
+        intercept = y1 - (slope * x1)
+        length = np.sqrt(((y2 - y1) ** 2) + ((x2 - x1) ** 2))
+        
+        # Check if slope falls within realistic bounds
+        if slope_min <= abs(slope) <= slope_max:
+            if slope < 0:  # Left lane (slopes up to the right, negative in image coordinates)
+                left_lines.append((slope, intercept))
+                left_weights.append(length)
+            else:          # Right lane (slopes down to the right, positive in image coordinates)
+                right_lines.append((slope, intercept))
+                right_weights.append(length)
                     
     left_lane = np.dot(left_weights, left_lines) / np.sum(left_weights) if len(left_weights) > 0 else None
     right_lane = np.dot(right_weights, right_lines) / np.sum(right_weights) if len(right_weights) > 0 else None
@@ -215,11 +218,14 @@ def frame_processor_detailed(image, config=None):
     hough_lines_img = np.zeros_like(image)
     if hough is not None:
         for line in hough:
-            for x1, y1, x2, y2 in line:
-                cv2.line(hough_lines_img, (x1, y1), (x2, y2), [0, 255, 0], 2) # Green for individual hough lines
+            coords = line.flatten()
+            if len(coords) == 4:
+                x1, y1, x2, y2 = coords
+                cv2.line(hough_lines_img, (int(x1), int(y1)), (int(x2), int(y2)), [0, 255, 0], 2) # Green for individual hough lines
     hough_overlay = cv2.addWeighted(image, 0.8, hough_lines_img, 1.0, 0.0)
     
     # 6. Average and draw lane lines
+    left_lane_model, right_lane_model = average_slope_intercept(hough)
     left_line, right_line = lane_lines(image, hough, config)
     lane_color = [config["lane_color_r"], config["lane_color_g"], config["lane_color_b"]]
     result = draw_lane_lines(image, [left_line, right_line], color=lane_color, thickness=config["lane_thickness"])
@@ -243,5 +249,6 @@ def frame_processor_detailed(image, config=None):
         "roi": region_rgb,
         "hough": hough_overlay,
         "result": result,
-        "detected_lanes": (left_line, right_line)
+        "detected_lanes": (left_line, right_line),
+        "lane_models": (left_lane_model, right_lane_model)
     }

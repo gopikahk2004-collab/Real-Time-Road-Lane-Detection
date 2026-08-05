@@ -9,7 +9,10 @@ try:
 except ImportError:
     from moviepy import VideoFileClip
 
-from moviepy.callbacks import ProgBarLogger
+try:
+    from moviepy.callbacks import ProgBarLogger as ProgressBarLogger
+except ImportError:
+    from proglog import ProgressBarLogger
 import time
 
 # Import our custom lane detection functions
@@ -187,9 +190,9 @@ config = {
 # ---------------------------------------------------------
 # MoviePy custom progress logger for Streamlit
 # ---------------------------------------------------------
-class StreamlitMoviePyLogger(ProgBarLogger):
+class StreamlitMoviePyLogger(ProgressBarLogger):
     def __init__(self, progress_bar, status_text):
-        super().__init__(init_state=None, bars=None, logged_bars=None)
+        super().__init__()
         self.progress_bar = progress_bar
         self.status_text = status_text
         self.total_frames = 0
@@ -294,7 +297,7 @@ if mode == "🖼️ Static Image Tuning":
     
     with tab1:
         st.write("**Original Road Camera Input**")
-        st.image(stages["original"], use_column_width=True)
+        st.image(stages["original"], use_container_width=True)
         st.markdown("""
         * **Input:** 3-channel RGB image captured by vehicle-mounted cameras.
         * **Goal:** Extract road features without noise or distortions.
@@ -304,10 +307,10 @@ if mode == "🖼️ Static Image Tuning":
         col_gray, col_blur = st.columns(2)
         with col_gray:
             st.write("**Grayscale Conversion**")
-            st.image(stages["grayscale"], use_column_width=True)
+            st.image(stages["grayscale"], use_container_width=True)
         with col_blur:
             st.write(f"**Gaussian Blur (Kernel: {config['kernel_size']}x{config['kernel_size']})**")
-            st.image(stages["blur"], use_column_width=True)
+            st.image(stages["blur"], use_container_width=True)
         st.markdown(f"""
         * **Grayscale**: Reduces calculation depth from 3 channels (RGB) to 1, increasing computational speed.
         * **Gaussian Blur**: Applies a convolution filter using Gaussian distribution to smooth out high-frequency noise. 
@@ -316,7 +319,7 @@ if mode == "🖼️ Static Image Tuning":
         
     with tab3:
         st.write(f"**Canny Edge Detection (Low: {config['low_threshold']}, High: {config['high_threshold']})**")
-        st.image(stages["edges"], use_column_width=True)
+        st.image(stages["edges"], use_container_width=True)
         st.markdown(f"""
         * **Canny Edge Detection**: Computes gradient intensities across the image. 
         * It uses double-threshold hysteresis to trace edges:
@@ -327,7 +330,7 @@ if mode == "🖼️ Static Image Tuning":
         
     with tab4:
         st.write("**Region of Interest boundary (Yellow Trapezoid)**")
-        st.image(stages["roi_visualizer"], use_column_width=True)
+        st.image(stages["roi_visualizer"], use_container_width=True)
         st.markdown("""
         * **ROI Polygon**: Restricts line search to the road section immediately ahead of the vehicle.
         * Eliminates background clutter (sky, trees, side barriers) which might confuse the line detector.
@@ -335,7 +338,7 @@ if mode == "🖼️ Static Image Tuning":
         
     with tab5:
         st.write("**Masked Region of Interest (Logical Bitwise AND)**")
-        st.image(stages["roi"], use_column_width=True)
+        st.image(stages["roi"], use_container_width=True)
         st.markdown("""
         * **Masking**: Applies a bitwise `AND` between the Canny output and the ROI polygon.
         * Only active edges lying within our road lane region are retained.
@@ -343,7 +346,7 @@ if mode == "🖼️ Static Image Tuning":
         
     with tab6:
         st.write("**Detected Hough Lines (Green Lines)**")
-        st.image(stages["hough"], use_column_width=True)
+        st.image(stages["hough"], use_container_width=True)
         st.markdown(f"""
         * **Probabilistic Hough Line Transform**: Detects straight lines by voting on intersections in parametric space.
         * Configured parameters:
@@ -356,19 +359,19 @@ if mode == "🖼️ Static Image Tuning":
         
     with tab7:
         st.write("**Final Output Overlay**")
-        st.image(stages["result"], use_column_width=True)
+        st.image(stages["result"], use_container_width=True)
         
         # Display slopes
-        left_lane, right_lane = stages["detected_lanes"]
+        left_lane, right_lane = stages["lane_models"]
         
         col_l, col_r = st.columns(2)
         with col_l:
-            if left_lane:
+            if left_lane is not None:
                 st.info(f"↖️ **Left Lane Slope:** `{left_lane[0]:.4f}` | **Intercept:** `{left_lane[1]:.1f}`")
             else:
                 st.warning("↖️ **Left Lane:** Not detected (adjust parameters)")
         with col_r:
-            if right_lane:
+            if right_lane is not None:
                 st.info(f"↗️ **Right Lane Slope:** `{right_lane[0]:.4f}` | **Intercept:** `{right_lane[1]:.1f}`")
             else:
                 st.warning("↗️ **Right Lane:** Not detected (adjust parameters)")
