@@ -1,0 +1,27 @@
+# Python Caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Virtual Environments
+venv/
+ENV/
+env/
+.env
+
+# Streamlit local configurations
+.streamlit/
+
+# OS Specific Files
+.DS_Store
+Thumbs.db
+
+# Data & Large Media files (Downloaded dynamically by the app)
+data/
+*.mp4
+*.mov
+*.avi
+processed_output.mp4
